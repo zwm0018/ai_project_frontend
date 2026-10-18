@@ -1,0 +1,233 @@
+/* ============================================================
+   AI Studio · 运动系统（暗房显影）
+   四层：环境（常亮）→ 场景（进入/转场）→ 状态（显影过程）→ 交互（回应）
+   原则：transform / opacity / filter only；常亮层低强度；
+   减少动态偏好下保留状态结果、压平编排。
+   ============================================================ */
+
+/* ========== 0 · 滚动入场（显影） ========== */
+.rv {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition:
+    opacity .72s var(--ease-develop) var(--rv-delay, 0ms),
+    transform .72s var(--ease-develop) var(--rv-delay, 0ms);
+  will-change: opacity, transform;
+}
+.rv-in { opacity: 1; transform: none; will-change: auto; }
+
+/* ========== 1 · 路由：快门光门 + 逐区显影（纯 CSS，不用 JS 钩子） ========== */
+.route-enter-active { transition: opacity .2s var(--ease); }
+.route-enter-from { opacity: 0; }
+.route-enter-active > * { animation: page-develop .64s var(--ease-out) both; }
+.route-enter-active > *:nth-child(2) { animation-delay: .06s; }
+.route-enter-active > *:nth-child(3) { animation-delay: .12s; }
+.route-enter-active > *:nth-child(4) { animation-delay: .18s; }
+.route-enter-active > *:nth-child(5) { animation-delay: .24s; }
+.route-enter-active > *:nth-child(6) { animation-delay: .3s; }
+.route-leave-active { transition: opacity .14s var(--ease); }
+.route-leave-to { opacity: 0; }
+@keyframes page-develop {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); filter: blur(3px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+/* 快门光门：每次路由进入，一条细光从侧栏右侧扫过内容区 */
+.gate {
+  position: fixed; top: 56px; bottom: 0;
+  left: var(--side-w, 240px); width: 1px;
+  z-index: 45; pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(200, 230, 255, .55) 18%, rgba(190, 225, 255, .32) 82%, transparent 100%);
+  box-shadow: 0 0 44px 12px rgba(143, 199, 255, .09);
+  animation: gate-run .88s var(--ease-shutter) both;
+}
+@keyframes gate-run {
+  0%   { transform: translateX(0); opacity: 0; }
+  12%  { opacity: 1; }
+  100% { transform: translateX(calc(100vw - var(--side-w, 240px))); opacity: 0; }
+}
+
+/* ========== 2 · 页头 / 区块：标题过光、细线生长 ========== */
+.page-head h1 { color: var(--text-1); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .page-head h1 {
+    background: linear-gradient(100deg, var(--text-1) 0%, var(--text-1) 44%, #FFFFFF 51%, var(--text-1) 58%, var(--text-1) 100%);
+    background-size: 280% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: title-sheen 1.15s var(--ease-out) both;
+  }
+}
+@keyframes title-sheen {
+  from { background-position: 100% 0; }
+  to   { background-position: 0 0; }
+}
+.page-head::after {
+  content: ""; position: absolute; left: var(--content-pad); right: var(--content-pad); bottom: 0;
+  height: 1px; transform-origin: left center;
+  background: linear-gradient(90deg, rgba(143, 199, 255, .5) 0%, rgba(255, 255, 255, .12) 14%, rgba(111, 232, 196, .26) 38%, rgba(255, 255, 255, .06) 66%, transparent 100%);
+  animation: rule-grow .95s var(--ease-develop) both;
+}
+@keyframes rule-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ========== 3 · 内容显影（媒体 / 帧） ========== */
+@keyframes media-develop {
+  from { opacity: 0; filter: blur(10px) brightness(.55) saturate(.55); }
+  to   { opacity: 1; filter: brightness(1.22) saturate(1.08) contrast(1.02); }
+}
+.asset-thumb img,
+.job-thumb img,
+.proj-cover img,
+.char-portrait img,
+.lb-media img {
+  animation: media-develop .92s var(--ease-develop) both;
+  animation-delay: calc(min(var(--i, 0), 10) * 55ms);
+}
+/* 视频/口型帧：显影后继续极慢推拉（画面是活的） */
+.asset-card.kind-video .asset-thumb img,
+.asset-card.kind-lipsync .asset-thumb img {
+  animation:
+    media-develop .92s var(--ease-develop) both,
+    media-pan 34s ease-in-out 1.4s infinite alternate;
+  animation-delay: calc(min(var(--i, 0), 10) * 55ms), 1.4s;
+}
+@keyframes media-pan {
+  from { transform: scale(1.005) translate3d(0, 0, 0); }
+  to   { transform: scale(1.055) translate3d(-.8%, -1.2%, 0); }
+}
+/* 音频波形：常亮微呼吸 */
+.wavebar i {
+  transform-origin: center;
+  animation: wave-breathe 3.8s ease-in-out infinite alternate;
+  animation-delay: calc(var(--bi, 0) * -110ms);
+}
+@keyframes wave-breathe {
+  from { transform: scaleY(.8); opacity: .55; }
+  to   { transform: scaleY(1.02); opacity: .9; }
+}
+
+/* ========== 4 · 任务状态：潜影 → 显影 → 定影 ========== */
+/* 潜影（排队）：画面未出现，底片在轻微呼吸 */
+.job-card[data-st="queued"] .job-thumb::before,
+.job-card[data-st="running"] .job-thumb::before,
+.job-card[data-st="failed"] .job-thumb::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+}
+.job-card[data-st="queued"] .job-thumb::before {
+  background: radial-gradient(80% 90% at 50% 62%, rgba(143, 168, 199, .14), transparent 70%);
+  animation: latent-breathe 3.6s ease-in-out infinite alternate;
+}
+@keyframes latent-breathe { from { opacity: .3; } to { opacity: .85; } }
+/* 显影中：一道扫描光缓慢掠过 + 淡蓝边沿呼吸 */
+.job-card[data-st="running"] .job-thumb::before {
+  background: linear-gradient(104deg, transparent 34%, rgba(200, 230, 255, .16) 50%, transparent 66%);
+  animation: develop-scan 2.8s var(--ease-in-out) infinite;
+}
+@keyframes develop-scan {
+  from { transform: translateX(-42%); }
+  to   { transform: translateX(42%); }
+}
+.job-card[data-st="running"] {
+  border-color: rgba(143, 199, 255, .3);
+  animation: job-breathe 3.8s ease-in-out infinite alternate;
+}
+@keyframes job-breathe {
+  from { box-shadow: 0 4px 16px rgba(0, 0, 0, .34), 0 0 0 0 rgba(143, 199, 255, 0); }
+  to   { box-shadow: 0 8px 28px rgba(0, 0, 0, .42), 0 0 22px -6px rgba(143, 199, 255, .3); }
+}
+/* 失败：走光红边 */
+.job-card[data-st="failed"] .job-thumb::before {
+  background: linear-gradient(118deg, transparent 34%, rgba(232, 115, 123, .22) 52%, transparent 70%);
+  animation: latent-breathe 5s ease-in-out infinite alternate;
+}
+/* 进度条：亮头 + 微流光 */
+.progress-track .progress { position: relative; overflow: hidden; }
+.job-card.running .progress-track .progress::after,
+.job-row.running .progress-track .progress::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 249, 238, .55), transparent);
+  animation: progress-glint 2.2s var(--ease-in-out) infinite;
+}
+@keyframes progress-glint {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+/* 任务行：左侧状态灯条 */
+.job-row::before {
+  content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 2px;
+  border-radius: 2px; background: transparent; transition: background .3s var(--ease);
+}
+.job-row[data-st="running"]::before { background: linear-gradient(180deg, var(--brand-hi), var(--brand-lo)); box-shadow: 0 0 12px var(--brand-a20); }
+.job-row[data-st="queued"]::before { background: var(--b-queued); opacity: .6; }
+.job-row[data-st="succeeded"]::before { background: var(--ok); opacity: .45; }
+.job-row[data-st="failed"]::before { background: var(--err); opacity: .75; }
+.job-row[data-st="cancelled"]::before { background: var(--text-4); opacity: .35; }
+
+/* ========== 5 · 顶栏曝光表（队列活跃度） ========== */
+.expo { display: flex; align-items: flex-end; gap: 2px; height: 13px; }
+.expo i {
+  width: 2px; height: 100%; border-radius: 1px;
+  background: currentColor; opacity: .22;
+  transform-origin: bottom center;
+  animation: expo-idle 3.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--n, 0) * -.42s);
+}
+.expo.live { color: var(--brand-soft); }
+.expo.live i { opacity: .85; animation: expo-live .92s ease-in-out infinite alternate; }
+@keyframes expo-idle { from { transform: scaleY(.4); opacity: .15; } to { transform: scaleY(.85); opacity: .4; } }
+@keyframes expo-live { from { transform: scaleY(.25); opacity: .45; } to { transform: scaleY(1); opacity: 1; } }
+
+/* ========== 6 · 侧栏光轨：光在管线里流动 ========== */
+.nav-group--stages { position: relative; }
+.nav-group--stages::before {
+  content: ""; position: absolute; left: 17px; top: 56px; bottom: 17px; width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .16) 12%, rgba(255, 255, 255, .16) 88%, transparent);
+}
+.nav-group--stages::after {
+  content: ""; position: absolute; left: 16px; width: 3px; height: 20px; border-radius: 6px;
+  background: linear-gradient(180deg, transparent, var(--brand-hi), transparent);
+  filter: blur(1px); opacity: 0; pointer-events: none;
+  animation: rail-pulse 6.4s var(--ease-in-out) 1.2s infinite;
+}
+@keyframes rail-pulse {
+  0%   { top: 48px; opacity: 0; }
+  10%  { opacity: .85; }
+  72%  { opacity: .85; }
+  86%  { top: calc(100% - 34px); opacity: 0; }
+  100% { top: calc(100% - 34px); opacity: 0; }
+}
+
+/* ========== 7 · 帧上的光（指针跟随） ========== */
+.fx-light { position: relative; }
+.fx-light::before {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(215, 238, 255, .13), transparent 68%);
+  opacity: 0; transition: opacity .32s var(--ease);
+}
+.fx-light:hover::before { opacity: 1; }
+/* 轻微倾斜（由 v-tilt 设置变量；触屏/减少动态不启用） */
+.fx-tilt { transition: transform .13s linear, box-shadow .3s var(--ease), border-color .3s var(--ease); }
+.fx-tilt.tilting {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translate3d(0, -2px, 0);
+}
+
+/* ========== 8 · 减少动态：保留结果，压平常亮层 ========== */
+@media (prefers-reduced-motion: reduce) {
+  .rv { opacity: 1; transform: none; transition: none; }
+  .route-enter-active > * { animation: none; }
+  .page-head h1 { animation: none; background: none; -webkit-text-fill-color: currentColor; color: var(--text-1); }
+  .page-head::after { animation: none; }
+  .gate { display: none; }
+  .asset-thumb img, .job-thumb img, .proj-cover img, .char-portrait img, .lb-media img,
+  .asset-card.kind-video .asset-thumb img, .asset-card.kind-lipsync .asset-thumb img {
+    animation: none;
+  }
+  .wavebar i { animation: none; opacity: .6; transform: none; }
+  .job-card[data-st="running"], .job-card[data-st="queued"] .job-thumb::before,
+  .job-card[data-st="running"] .job-thumb::before, .job-card[data-st="failed"] .job-thumb::before,
+  .progress-track .progress::after, .expo i, .nav-group--stages::after {
+    animation: none;
+  }
+}

@@ -1,0 +1,126 @@
+/* ============================================================
+   AI Studio · 中性暗房（暗房系 v6）
+   设计主张：每一次生成都是显影——#121212 中性黑灰是暗房，淡蓝是
+   安全灯，薄荷绿与 #101C23 蓝绿光晕是空气里的反射；界面由光、框、
+   活着的画面构成，强调色只占小面积。
+   六层语义：bg / surface / text / stroke / brand / state
+   ============================================================ */
+:root {
+  /* —— 1 · bg 暗房基底（中性黑灰，由深至浅）—— */
+  --bg-app: #18191D;
+  --bg-0: #121317;
+  --bg-1: #1D1E23;
+  --bg-2: #25262D;
+  --bg-3: #30313A;
+
+  /* —— 2 · surface 容器面（暗房台面 / 井）—— */
+  --surface-glass: rgba(22, 22, 22, .86);     /* 侧栏 / 顶栏 */
+  --surface-glass-deep: rgba(18, 18, 18, .78);
+  --surface-raise: rgba(30, 30, 30, .74);     /* 统计格 */
+  --surface-card: rgba(26, 26, 26, .90);      /* 任务 / 资产卡 */
+  --surface-card-hi: rgba(36, 36, 36, .96);   /* 卡 hover */
+  --surface-panel: rgba(24, 24, 24, .82);     /* 设置 / 工坊面板 */
+  --surface-menu: rgba(20, 20, 20, .98);      /* 下拉菜单 */
+  --surface-well: rgba(12, 12, 12, .60);      /* 输入井 */
+  --surface-well-deep: rgba(10, 10, 10, .72);
+  --surface-paper: rgba(255, 255, 255, .035); /* 相纸薄涂 */
+
+  /* —— 3 · text 荧白 / 中性灰 —— */
+  --text-1: #F1F0F5;
+  --text-2: #C9C8D2;
+  --text-3: #A6A5B3;
+  --text-4: #9493A3;
+
+  /* —— 4 · stroke 描边（中性细线）—— */
+  --stroke-1: rgba(255, 255, 255, .09);
+  --stroke-2: rgba(255, 255, 255, .18);
+  --stroke-hairline: rgba(255, 255, 255, .055);
+
+  /* —— 5 · brand 淡蓝（主强调）+ 薄荷 / 蓝绿光 —— */
+  --brand: #BDAEFF;
+  --brand-hi: #E4DDFF;
+  --brand-lo: #9F8CEB;
+  --brand-ink: #211B36;
+  --brand-soft: #D8CEFF;
+  --brand-a04: rgba(189, 174, 255, .05);
+  --brand-a08: rgba(189, 174, 255, .09);
+  --brand-a12: rgba(189, 174, 255, .13);
+  --brand-a20: rgba(189, 174, 255, .22);
+  --brand-a32: rgba(189, 174, 255, .34);
+  --glow-teal: rgba(24, 74, 84, .62);         /* #101C23 提亮后的实际光 */
+  --ambient: #101C23;                         /* 暗房蓝绿光晕基底 */
+  --silver: #D6D6D6;
+  --mint: #6FE8C4;                            /* 辅色 · 薄荷 */
+  --sky: #BDAEFF;                             /* 辅色 · 淡蓝 */
+  --periwinkle: #B9A7FF;                      /* 辅色 · 蓝紫 */
+
+  /* —— 6 · state 定影 / 走光 / 药液 —— */
+  --ok: #6FE8C4;
+  --err: #FF6B6B;
+  --warn: #FFC857;
+  --info: #BDAEFF;
+  --b-queued: #A9B4D6;
+  --tag-image: #BDAEFF;
+  --tag-video: #B9A7FF;
+  --tag-audio: #6FE8C4;
+  --tag-lipsync: #9FD8E8;
+
+  /* —— 字阶（值 + 行高配对）—— */
+  --fs-10_5: 10.5px;  --lh-10_5: 1.45;
+  --fs-11: 11px;      --lh-11: 1.5;
+  --fs-11_5: 11.5px;  --lh-11_5: 1.5;
+  --fs-12: 12px;      --lh-12: 1.55;
+  --fs-12_5: 12.5px;  --lh-12_5: 1.55;
+  --fs-13: 13px;      --lh-13: 1.55;
+  --fs-13_5: 13.5px;  --lh-13_5: 1.6;
+  --fs-14: 14px;      --lh-14: 1.6;
+  --fs-15: 15px;      --lh-15: 1.6;
+  --fs-16: 16px;      --lh-16: 1.5;
+  --fs-18: 18px;      --lh-18: 1.45;
+  --fs-22: 22px;      --lh-22: 1.35;
+  --fs-30: 32px;      --lh-30: 1.2;
+  --fs-40: 40px;      --lh-40: 1.12;
+  --fs-48: 52px;      --lh-48: 1.1;
+
+  /* —— 间距（4px 网格）—— */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-7: 28px;  --sp-9: 36px;  --sp-14: 56px;
+  /* 区块纵向节奏 */
+  --sec-gap-sm: 28px;
+  --sec-gap: 44px;
+  --sec-gap-lg: 72px;
+  /* 内容列：--content-w 为有效内容宽；带侧距的外层容器统一用 --content-outer */
+  --content-w: 1160px;
+  --content-pad: 34px;
+  --content-outer: calc(var(--content-w) + 2 * var(--content-pad));
+
+  /* —— 圆角（整体放大；大面板走亚克力）—— */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-pill: 9999px;
+
+  /* —— 运动：时长 / 曲线（行为决定参数，不全局套一个值）—— */
+  --dur-1: .16s;   /* 操作回应 */
+  --dur-2: .28s;   /* 局部状态 */
+  --dur-3: .48s;   /* 空间变化 */
+  --dur-4: .8s;    /* 场景进入 */
+  --dur-5: 1.4s;   /* 显影过程 */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-shutter: cubic-bezier(.76, 0, .24, 1);   /* 快门：快速收束 */
+  --ease-develop: cubic-bezier(.22, 1, .36, 1);   /* 显影：长尾收敛 */
+
+  /* —— 字族（品牌字距 0.18em 为唯一例外，中文零字距）—— */
+  --font-sans: "Sora", "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+
+/* 窄视口整列收缩：所有区块只改这一个变量，左缘对齐关系不变 */
+@media (max-width: 1380px) {
+  :root { --content-w: 1000px; }
+}

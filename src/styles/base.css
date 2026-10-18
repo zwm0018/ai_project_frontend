@@ -1,0 +1,65 @@
+/* ============================================================
+   AI Studio · 基础层（reset + 相纸基线 + 可达性）
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { color-scheme: dark; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-13_5);
+  line-height: var(--lh-13_5);
+  color: var(--text-1);
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(16, 28, 35, .95) 0%, transparent 62%),
+    var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+input, textarea, select { font-family: inherit; color: inherit; }
+a { color: inherit; }
+img { -webkit-user-drag: none; }
+
+::selection { background: rgba(189, 174, 255, .3); color: #F4F4F4; }
+
+:focus-visible {
+  outline: 1.5px solid rgba(143, 199, 255, .85);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .13);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .24); background-clip: content-box; }
+* { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .14) transparent; }
+
+/* 数字与时间码：等宽，避免计时抖动 */
+.num, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* GSAP matchMedia 之外的 CSS 动画兜底（氛围层与微反馈一并压平） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

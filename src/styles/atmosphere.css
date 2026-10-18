@@ -1,0 +1,174 @@
+/* ============================================================
+   AI Studio · 氛围层（暗房：安全灯、药液、灰尘、胶片颗粒）
+   环境不进 GSAP：CSS + rAF 原生实现，常亮、低强度、可压平。
+   video = 影片底（Landing / 合成器）
+   fluid = 光场 + 点线阵列 + 放大机光束（工作台）
+   login = 收敛光斑场 + 阵列隐去（进入暗房前的一道门帘）
+   ============================================================ */
+
+/* —— 影片底 —— */
+.atmo { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+/* 影片压暗 + #101C23 蓝绿光晕融合（保持一点淡蓝空间感） */
+.video-wash {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(96% 84% at 20% 18%, rgba(16, 28, 35, .92) 0%, transparent 62%),
+    radial-gradient(90% 90% at 84% 76%, rgba(16, 40, 48, .82) 0%, transparent 64%),
+    radial-gradient(50% 40% at 92% 10%, rgba(143, 199, 255, .16) 0%, transparent 70%),
+    linear-gradient(140deg, rgba(16, 28, 35, .55), rgba(14, 20, 24, .5) 58%, rgba(16, 28, 35, .52));
+  mix-blend-mode: color;
+  opacity: .42;
+}
+.bg-video { position: fixed; inset: -5%; z-index: 0; overflow: hidden; }
+.bg-video video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  z-index: 1; opacity: 0; will-change: opacity;
+  filter: blur(7px) saturate(.75) contrast(1.06) brightness(.78);
+  transform: scale(1.08);
+  animation: reel-zoom 72s ease-in-out infinite alternate;
+}
+.bg-video video.is-on { z-index: 2; opacity: 1; }
+@keyframes reel-zoom {
+  from { transform: scale(1.05); }
+  to   { transform: scale(1.1) translate(1%, -.8%); }
+}
+.bg-tint {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    radial-gradient(130% 100% at 62% 26%, rgba(0, 0, 0, .28) 24%, rgba(0, 0, 0, .72) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, .58) 0%, rgba(0, 0, 0, .4) 48%, rgba(0, 0, 0, .78) 100%);
+}
+.dotgrid {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: .4;
+  background-image: radial-gradient(rgba(255, 255, 255, .07) 1px, transparent 1.2px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 20%, #000 0%, transparent 80%);
+  mask-image: radial-gradient(70% 60% at 50% 20%, #000 0%, transparent 80%);
+}
+
+/* —— 流动光场：三团径向色斑兜底（canvas 之下）—— */
+.fluid { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: var(--bg-0); }
+.fluid i { position: absolute; border-radius: 50%; will-change: transform; }
+.fluid i:nth-child(1) {
+  width: 58vmax; height: 58vmax; left: -16vmax; top: -22vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(30, 88, 96, .34), rgba(30, 88, 96, 0) 64%);
+  animation: fluid-a 56s ease-in-out infinite;
+}
+.fluid i:nth-child(2) {
+  width: 44vmax; height: 44vmax; right: -14vmax; top: 16%;
+  background: radial-gradient(circle at 50% 50%, rgba(143, 199, 255, .06), rgba(143, 199, 255, 0) 60%);
+  animation: fluid-b 47s ease-in-out infinite;
+}
+.fluid i:nth-child(3) {
+  width: 54vmax; height: 54vmax; left: 22%; bottom: -28vmax;
+  background: radial-gradient(circle at 50% 50%, rgba(52, 62, 66, .42), rgba(52, 62, 66, 0) 62%);
+  animation: fluid-c 66s ease-in-out infinite;
+}
+@keyframes fluid-a {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  30%  { transform: translate3d(7vmax, 5vmax, 0) scale(1.12); }
+  62%  { transform: translate3d(-4vmax, 9vmax, 0) scale(.96); }
+  82%  { transform: translate3d(-2vmax, 3vmax, 0) scale(1.05); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes fluid-b {
+  0%   { transform: translate3d(0, 0, 0) scale(1.08); }
+  36%  { transform: translate3d(-9vmax, 5vmax, 0) scale(.94); }
+  68%  { transform: translate3d(-3vmax, -6vmax, 0) scale(1.14); }
+  100% { transform: translate3d(0, 0, 0) scale(1.08); }
+}
+@keyframes fluid-c {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  28%  { transform: translate3d(6vmax, -7vmax, 0) scale(1.16); }
+  58%  { transform: translate3d(10vmax, 2vmax, 0) scale(.92); }
+  84%  { transform: translate3d(3vmax, -2vmax, 0) scale(1.06); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+/* 有机光斑场（低分辨率 canvas + 平滑放大 = 柔焦；含尘埃） */
+.fluid-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* —— 放大机光束：一束极淡的斜光缓慢扫过暗房（常亮层）—— */
+.beam {
+  position: fixed; z-index: 1; pointer-events: none;
+  top: -16%; left: max(264px, 18vw); width: 46vw; height: 132vh;
+  transform: rotate(16deg) translate3d(0, 0, 0);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(170, 215, 255, .028) 38%,
+    rgba(210, 235, 228, .05) 50%,
+    rgba(111, 232, 196, .028) 62%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  animation: beam-sweep 34s ease-in-out infinite alternate;
+  opacity: .82;
+  will-change: transform;
+}
+@keyframes beam-sweep {
+  from { transform: rotate(16deg) translate3d(0, 0, 0); }
+  to   { transform: rotate(16deg) translate3d(26vw, 6vh, 0); }
+}
+/* 光谱侧漏：底部青紫，呼吸极慢 */
+.leak {
+  position: fixed; z-index: 1; pointer-events: none;
+  left: -12vw; bottom: -26vh; width: 62vw; height: 62vh;
+  background: radial-gradient(ellipse at 40% 60%, rgba(143, 199, 255, .075) 0%, rgba(143, 199, 255, 0) 64%);
+  animation: leak-breathe 21s ease-in-out infinite alternate;
+}
+@keyframes leak-breathe {
+  from { opacity: .55; transform: translate3d(0, 0, 0) scale(1); }
+  to   { opacity: 1; transform: translate3d(3vw, -2vh, 0) scale(1.08); }
+}
+
+/* —— 点线阵列（相纸网格）：细线成格、交点成点，缓慢漂移 —— */
+.lattice {
+  position: fixed; inset: -96px; z-index: 1; pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, .055) 1px, transparent 1.3px),
+    linear-gradient(rgba(255, 255, 255, .022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .022) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px, 48px 48px;
+  -webkit-mask-image: radial-gradient(86% 78% at 50% 16%, #000 0%, transparent 84%);
+  mask-image: radial-gradient(86% 78% at 50% 16%, #000 0%, transparent 84%);
+  animation: lattice-drift 120s linear infinite;
+  transition: opacity 1.2s var(--ease);
+}
+@keyframes lattice-drift { to { transform: translate3d(48px, 48px, 0); } }
+/* 门帘态：登录页阵列隐去，进入工作台时浮现（帘后秩序） */
+.lattice--hidden { opacity: 0; }
+
+/* —— 暗角 / 动态胶片颗粒 —— */
+.vignette {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(128% 100% at 50% 36%, rgba(0, 0, 0, 0) 58%, rgba(0, 0, 0, .5) 100%);
+}
+.grain {
+  position: fixed; inset: -160px; z-index: 3; pointer-events: none;
+  mix-blend-mode: overlay; opacity: .5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.055 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
+  animation: grain-jitter 1.4s steps(5) infinite;
+  will-change: transform;
+}
+@keyframes grain-jitter {
+  0%   { transform: translate3d(0, 0, 0); }
+  20%  { transform: translate3d(-2%, 1.4%, 0); }
+  40%  { transform: translate3d(1.6%, -1.2%, 0); }
+  60%  { transform: translate3d(-1.2%, -2%, 0); }
+  80%  { transform: translate3d(2%, 1%, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+/* 相纸颗粒罩在内容上：静态、极轻，只为材质不为动效 */
+.film-veil {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  opacity: .16; mix-blend-mode: soft-light;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23v)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam { animation: none; opacity: .5; }
+  .leak { animation: none; opacity: .7; }
+  .grain { animation: none; }
+  .fluid i, .lattice { animation: none; }
+  .bg-video video { animation: none !important; transition: none !important; }
+}

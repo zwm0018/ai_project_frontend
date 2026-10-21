@@ -21,16 +21,34 @@ npm run preview  # 本机预览 dist，默认 http://127.0.0.1:4173
 
 部署时发布 `dist/`，并将前端路径回退至 `index.html`，以支持 Vue Router history 路由。
 
+## 真实登录（FastAPI）
+
+后端位于 `../elf_project_backend`，先按该目录 README 启动 `http://127.0.0.1:8000`。然后让前端使用 live 模式：
+
+```powershell
+Copy-Item .env.example .env.local
+# 将 VITE_API_MODE 改为 live
+npm run dev
+```
+
+默认演示账号为 `demo` / `demo1234`，由后端 `.env` 决定。live 模式下：
+
+- 登录调用 `POST /api/v1/auth/login`，token 存入 `localStorage`（记住我）或 `sessionStorage`。
+- 进入受保护路由前，守卫调用 `GET /api/v1/auth/me` 校验 JWT；401 会清理会话并回到登录页。
+- 退出调用 `POST /api/v1/auth/logout` 并清空本地会话。
+
+`.env.local` 已被忽略，不会误提交；团队默认仍可用 `mock` 模式离线演示。
+
 ## 当前能力与边界
 
 本仓库是**可交互的前端演示**，无需 ComfyUI、Ollama 或模型权重即可运行。
-登录使用任意非空用户名和密码，属于模拟认证，不提供生产环境访问控制。
+认证支持两种模式：默认 `mock`（任意非空凭据）与 `live`（FastAPI + JWT）；其余业务数据仍由 Pinia 模拟。
 
 - 首页可选择创作类型、输入描述，并将草稿带入登录后的创作合成器。
 - 图片、视频、语音、唇形工坊提供参数、素材选择和模拟任务反馈。
 - 包含剧集、资产库、角色库、任务中心和设置页面。
 - 任务在 Pinia 内模拟，部分播放、下载、服务检测及跨工坊操作仍是原型提示；示例图片为程序生成的占位画面。
-- `.env.example` 和 `src/api/client.ts` 保留后端接口位置。设置 `VITE_API_MODE=live` **不会自动启用真实推理**，仍需实现 API、认证与事件流的接入。
+- `.env.example` 和 `src/api/client.ts` 保留后端接口位置。设置 `VITE_API_MODE=live` 只启用真实认证，**不会自动启用真实推理**；任务与资产接口仍需按同一 `api` 对象迁移。
 - `/dev/login` 为开发模式测试跳板，生产构建不包含该路由。
 
 ## 界面预览

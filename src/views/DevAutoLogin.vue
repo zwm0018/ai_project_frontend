@@ -12,12 +12,8 @@ const auth = useAuthStore()
 const ui = useUiStore()
 
 onMounted(() => {
-  if (!auth.isAuthed) {
-    auth.token = 'dev_headless'
-    auth.user = { name: '研究员' }
-    localStorage.setItem('studio.token', 'dev_headless')
-    localStorage.setItem('studio.userName', '研究员')
-  }
+  /* 始终覆盖本地会话，避免 live 模式下残留的旧 token 干扰截图/E2E。 */
+  auth.devLogin('研究员')
   const side = route.query.sidebar
   if (side === '1' || side === '0') {
     ui.sidebarCollapsed = side === '1'

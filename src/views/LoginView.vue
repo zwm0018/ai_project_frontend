@@ -8,10 +8,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Icon from '../components/Icon.vue'
 import { gsap, prefersReduced } from '../gsap'
+import { API_MODE } from '../api/client'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const isLive = API_MODE === 'live'
 
 const username = ref('')
 const password = ref('')
@@ -101,7 +103,7 @@ onMounted(() => {
             class="form-input"
             type="text"
             autocomplete="username"
-            placeholder="输入演示用户名"
+            :placeholder="isLive ? '输入用户名' : '输入演示用户名'"
             :aria-invalid="!!err"
           >
         </div>
@@ -113,7 +115,7 @@ onMounted(() => {
             class="form-input"
             type="password"
             autocomplete="current-password"
-            placeholder="任意密码"
+            :placeholder="isLive ? '输入密码' : '任意密码'"
             :aria-invalid="!!err"
           >
         </div>
@@ -130,7 +132,7 @@ onMounted(() => {
           <span v-else class="dots" aria-label="登录中"><i></i><i></i><i></i></span>
         </button>
 
-        <p class="login-tip">Mock 演示：任意非空凭据即可进入 · 真实认证 M5 接入</p>
+        <p class="login-tip">{{ isLive ? '凭据由 FastAPI 校验 · JWT 会话' : 'Mock 演示：任意非空凭据即可进入' }}</p>
       </form>
 
       <p class="login-foot">研究组 · 内网部署 · v0.1</p>
